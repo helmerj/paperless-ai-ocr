@@ -2,6 +2,10 @@
 
 Python-Skript, dass Dokumente aus Paperless-ngx extrahiert, mittels lokalem LLM (Ollama) verarbeitet und die Texte sowie die Dateien aktualisiert.
 
+## Motivation
+PaperlessNGX benutzt Tesseract zur Testerkennung (OCR). Ich war mit der OCR-Qualität nicht wirklich zufrieden.  Tools wie paperless-AI waren nur bedingt in der Lage wirklich gute Titel, Korrespondenten und Tags zu generieren weil der gespeicherte Text als input nicht gut genug war. 
+Ich habe paperless-GPT mit Ollama zwar zum Laufen gebracht, es hat sich allerdings beständig geweigert Dokumente mit auto-OCR Tag automatisch zu prozessieren und eine Aktualisierung des Textinhalts in PaperlessNGX war nur bei manuellem Prozessieren erfolgreich.
+
 ## ✨ Features
 - **Pagination:** Verarbeitet tausende Dokumente ohne Unterbrechung.
 - **Lokales LLM-OCR:** Nutzt Ollama (z.B. `minicpm-v`) für hochpräzise Texterkennung.
