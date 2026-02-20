@@ -104,23 +104,35 @@ class PaperlessAPI:
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Token {config['TOKEN']}"})
 
-    def fetch_all_documents(self, tag_id):
-        url = f"{self.base_url}/api/documents/?tags__id__none={tag_id}&page_size=100"
+    def fetch_documents(self, exclude_tag=None, include_tag=None, force=False):
+        """
+        Fetches documents based on tag filters.
+        If force=True, we do not exclude documents that already have the 'done' tag.
+        """
+        params = {"page_size": 100}
+        
+        # Only exclude the 'done' tag if we aren't forcing re-processing
+        if exclude_tag and not force:
+            params["tags__id__none"] = exclude_tag
+            
+        if include_tag:
+            params["tags__id__all"] = include_tag
+
+        url = f"{self.base_url}/api/documents/"
         is_first_page = True
         
         while url:
             try:
-                r = self.session.get(url, timeout=30)
+                r = self.session.get(url, params=params if is_first_page else None, timeout=30)
                 r.raise_for_status()
                 data = r.json()
                 
                 if is_first_page:
                     tracker.set_total(data.get("count", 0))
-                    print(f"🎯 Total documents found to process: {tracker.total_to_process}")
+                    print(f"🎯 Total documents found for criteria: {tracker.total_to_process}")
                     is_first_page = False
                 
-                results = data.get("results", [])
-                for doc in results:
+                for doc in data.get("results", []):
                     yield doc
                 
                 url = data.get("next")
@@ -204,49 +216,42 @@ class PDFProcessor:
         writer.write(out)
         return out.getvalue()
 
-def producer(api, cache, job_queue, tag_id, target_id=None, force=False):
+def producer(api, cache, job_queue, config_tag_id, target_id=None, force=False, subgroup_tag_id=None):
     """
-    Handles document discovery with improved tag validation.
+    Discovery logic with precedence and force handling.
     """
-    # Ensure tag_id is an integer for comparison
-    target_tag_id = int(tag_id)
+    done_tag_id = int(config_tag_id)
 
     if target_id:
         try:
             doc = api.get_document_metadata(target_id)
-            # Ensure we are comparing integers to integers
             current_tags = [int(t) for t in doc.get('tags', [])]
             
-            print(f"🔍 DEBUG: Document {target_id} has tags: {current_tags} | Target Tag: {target_tag_id}")
-
-            # Implementation of --force logic
-            if target_tag_id in current_tags and not force:
-                print(f"⚠️ Document {target_id} already has the OCR tag (ID: {target_tag_id}). Skipping.")
-                print(f"💡 Use --force to re-process anyway.")
+            if done_tag_id in current_tags and not force:
+                print(f"⚠️ Document {target_id} already has the done tag. Use --force to override.")
                 tracker.set_total(1)
                 tracker.increment_done()
                 job_queue.put(None)
                 return
-
-            documents_to_process = [doc]
+                
+            docs_to_process = [doc]
             tracker.set_total(1)
-            print(f"🎯 Single document mode: Processing ID {target_id} (Force: {force})")
         except Exception as e:
-            print(f"❌ Failed to find document ID {target_id}: {e}")
+            print(f"❌ Error fetching ID {target_id}: {e}")
             job_queue.put(None)
             return
     else:
-        documents_to_process = api.fetch_all_documents(target_tag_id)
+        # fetch_documents handles API-level filtering for subgroup_tag_id and exclude logic
+        docs_to_process = api.fetch_documents(
+            exclude_tag=done_tag_id, 
+            include_tag=subgroup_tag_id,
+            force=force
+        )
 
-    for doc in documents_to_process:
+    for doc in docs_to_process:
         doc_id = doc['id']
-        # Double check for mass processing as well
         current_tags = [int(t) for t in doc.get('tags', [])]
         
-        if not target_id and target_tag_id in current_tags:
-            tracker.increment_done() 
-            continue
-            
         try:
             if cache.is_cached(doc_id):
                 imgs, total_count = cache.load_from_cache(doc_id)
@@ -263,28 +268,28 @@ def producer(api, cache, job_queue, tag_id, target_id=None, force=False):
                 "tags": current_tags
             })
         except Exception as e:
-            print(f"❌ Producer error on {doc['title']}: {e}", flush=True)
+            print(f"❌ Error on {doc['title']}: {e}")
             tracker.increment_done(success=False)
     
     job_queue.put(None)
 
 def main():
-    parser = argparse.ArgumentParser(description="Paperless-ngx OCR processing script.")
-    parser.add_argument("-id", type=int, help="Process only the document with this specific ID")
-    parser.add_argument("--force", action="store_true", help="Force processing even if tag exists (only works with -id)")
+    parser = argparse.ArgumentParser(description="Paperless-ngx AI OCR Tool")
+    parser.add_argument("-id", type=int, help="Process a single document ID")
+    parser.add_argument("-tag_id", type=int, help="Process all documents with this Tag ID")
+    parser.add_argument("--force", action="store_true", help="Process even if the 'done' tag is present")
     args = parser.parse_args()
 
-    print("🚀 Main function starting...", flush=True)
+    print("🚀 Script initiated...", flush=True)
     api = PaperlessAPI(CONFIG)
     ollama = OllamaClient(CONFIG)
     cache = CacheManager(CONFIG["CACHE_DIR"])
-    tag_id = CONFIG["TAG_ID"]
     
     job_queue = queue.Queue(maxsize=CONFIG["BUFFER_SIZE"])
     
     threading.Thread(
         target=producer, 
-        args=(api, cache, job_queue, tag_id, args.id, args.force), 
+        args=(api, cache, job_queue, CONFIG["TAG_ID"], args.id, args.force, args.tag_id), 
         daemon=True
     ).start()
 
@@ -292,29 +297,23 @@ def main():
         job = job_queue.get()
         if job is None: break
         
-        doc_id = job['id']
-        print(f"🧠 Processing: {job['title']} (ID: {doc_id})...")
-        
-        texts = []
-        for img in tqdm(job['images'], leave=False):
-            texts.append(ollama.ocr_image(img))
+        print(f"🧠 Processing: {job['title']} (ID: {job['id']})...")
+        texts = [ollama.ocr_image(img) for img in tqdm(job['images'], leave=False)]
         
         try:
-            footer = f"\n\n--- OCR Footer: {len(job['images'])} of {job['total_pages']} pages processed ---"
+            footer = f"\n\n--- OCR Footer: {len(job['images'])} pages processed ---"
             final_content = "\n\n".join(texts) + footer
             new_pdf = PDFProcessor.from_text(texts)
-            api.replace_file(doc_id, new_pdf)
-            api.update_document(doc_id, final_content, list(set(job['tags'] + [tag_id])))
-            cache.clear_cache(doc_id)
+            api.replace_file(job['id'], new_pdf)
+            api.update_document(job['id'], final_content, list(set(job['tags'] + [CONFIG["TAG_ID"]])))
+            cache.clear_cache(job['id'])
             tracker.increment_done(success=True)
         except Exception as e:
-            print(f"❌ Update failed for {job['title']}: {e}", flush=True)
+            print(f"❌ Update failed for {job['id']}: {e}")
             tracker.increment_done(success=False)
             
         tracker.print_report()
         job_queue.task_done()
-    
-    print("🏁 Processing finished.", flush=True)
 
 if __name__ == "__main__":
     main()
