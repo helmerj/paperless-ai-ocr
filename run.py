@@ -27,7 +27,7 @@ CONFIG = {
     "TAG_NAME": os.getenv("TAG_NAME", "ocr-done"),
     "TAG_ID": os.getenv("TAG_ID", 1065),
     "BUFFER_SIZE": int(os.getenv("BUFFER_SIZE", 5)),
-    "PAGE_LIMIT": 3,
+    "PAGE_LIMIT": int(os.getenv("PAGE_LIMIT", 3)),
     "CACHE_DIR": "./ocr_cache"
 }
 
