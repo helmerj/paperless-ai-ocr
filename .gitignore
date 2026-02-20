@@ -3,6 +3,7 @@ ocr_cache/
 venv/
 .venv/
 env/
+failed_ids.txt
 
 __pycache__/
 *.py[cod]
