@@ -1,0 +1,7 @@
+requests
+python-dotenv
+pypdf
+reportlab
+tqdm
+pdf2image
+pillow
