@@ -7,6 +7,7 @@ import threading
 import json
 import requests
 import sys
+import argparse  # Added for CLI arguments
 from dotenv import load_dotenv
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
@@ -127,6 +128,12 @@ class PaperlessAPI:
                 print(f"❌ API connection failed: {e}", flush=True)
                 url = None
 
+    def get_document_metadata(self, doc_id):
+        """Fetches metadata for a single specific document."""
+        r = self.session.get(f"{self.base_url}/api/documents/{doc_id}/")
+        r.raise_for_status()
+        return r.json()
+
     def download_document(self, doc_id):
         return self.session.get(f"{self.base_url}/api/documents/{doc_id}/download/").content
 
@@ -198,13 +205,31 @@ class PDFProcessor:
         writer.write(out)
         return out.getvalue()
 
-def producer(api, cache, job_queue, tag_id):
-    for doc in api.fetch_all_documents(tag_id):
+def producer(api, cache, job_queue, tag_id, target_id=None):
+    """
+    If target_id is provided, only process that one document.
+    Otherwise, fetch all documents without the target tag.
+    """
+    if target_id:
+        try:
+            doc = api.get_document_metadata(target_id)
+            documents_to_process = [doc]
+            tracker.set_total(1)
+            print(f"🎯 Single document mode: Processing ID {target_id}")
+        except Exception as e:
+            print(f"❌ Failed to find document ID {target_id}: {e}")
+            job_queue.put(None)
+            return
+    else:
+        documents_to_process = api.fetch_all_documents(tag_id)
+
+    for doc in documents_to_process:
         doc_id = doc['id']
         current_tags = doc.get('tags', [])
         
-        if tag_id in current_tags:
-            tracker.increment_done() # Skip but count as "processed"
+        # In single ID mode, we ignore the tag check to allow force-processing
+        if not target_id and tag_id in current_tags:
+            tracker.increment_done() 
             continue
             
         try:
@@ -229,6 +254,11 @@ def producer(api, cache, job_queue, tag_id):
     job_queue.put(None)
 
 def main():
+    # --- CLI ARGUMENT PARSING ---
+    parser = argparse.ArgumentParser(description="Paperless-ngx OCR processing script.")
+    parser.add_argument("-id", type=int, help="Process only the document with this specific ID")
+    args = parser.parse_args()
+
     print("🚀 Main function starting...", flush=True)
     api = PaperlessAPI(CONFIG)
     ollama = OllamaClient(CONFIG)
@@ -236,14 +266,20 @@ def main():
     tag_id = CONFIG["TAG_ID"]
     
     job_queue = queue.Queue(maxsize=CONFIG["BUFFER_SIZE"])
-    threading.Thread(target=producer, args=(api, cache, job_queue, tag_id), daemon=True).start()
+    
+    # Pass args.id to the producer
+    threading.Thread(
+        target=producer, 
+        args=(api, cache, job_queue, tag_id, args.id), 
+        daemon=True
+    ).start()
 
     while True:
         job = job_queue.get()
         if job is None: break
         
         doc_id = job['id']
-        print(f"🧠 Processing: {job['title']}...")
+        print(f"🧠 Processing: {job['title']} (ID: {doc_id})...")
         
         texts = []
         for img in tqdm(job['images'], leave=False):
@@ -264,7 +300,7 @@ def main():
         tracker.print_report()
         job_queue.task_done()
     
-    print("🏁 All documents processed. Final Status:", flush=True)
+    print("🏁 Processing finished. Final Status:", flush=True)
     tracker.print_report()
 
 if __name__ == "__main__":
