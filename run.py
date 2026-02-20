@@ -23,19 +23,19 @@ CONFIG = {
     "OLLAMA_URL": os.getenv("OLLAMA_URL"),
     "MODEL": os.getenv("MODEL", "minicpm-v:latest"),
     "TAG_NAME": os.getenv("TAG_NAME", "ocr-done"),
-    "TAG_ID": os.getenv("TAG_ID", 1065),
+    "TAG_ID": int(os.getenv("TAG_ID", 1065)),
+    "FAILED_TAG_ID": int(os.getenv("FAILED_TAG_ID", 1066)),
     "BUFFER_SIZE": int(os.getenv("BUFFER_SIZE", 5)),
     "PAGE_LIMIT": int(os.getenv("PAGE_LIMIT", 3)),
     "CACHE_DIR": "./ocr_cache",
     "THREADS": int(os.getenv("NUMBER_CORES", 1)),
-    "DLQ_FILE": "failed_ids.txt" # New Config
+    "DLQ_FILE": "failed_ids.txt"
 }
 
-# Lock for thread-safe writing to the DLQ file
 dlq_lock = threading.Lock()
 
 def log_to_dlq(doc_id):
-    """Appends a failed document ID to the dead letter queue file."""
+    """Appends failed ID to local file."""
     with dlq_lock:
         with open(CONFIG["DLQ_FILE"], "a") as f:
             f.write(f"{doc_id}\n")
@@ -48,22 +48,17 @@ class StatusTracker:
         self.lock = threading.Lock()
 
     def set_total(self, count):
-        with self.lock:
-            self.total_to_process = count
+        with self.lock: self.total_to_process = count
 
     def increment_done(self, success=True):
         with self.lock:
             self.completed += 1
-            if not success:
-                self.failed += 1
+            if not success: self.failed += 1
             percent = (self.completed / self.total_to_process * 100) if self.total_to_process > 0 else 0
             sys.stdout.write(f"\r📊 Progress: {self.completed}/{self.total_to_process} ({percent:.1f}%) | Failures: {self.failed}")
             sys.stdout.flush()
 
 tracker = StatusTracker()
-
-# ... [PaperlessAPI, OllamaClient, PDFProcessor remain the same as previous version] ...
-# (Assuming they are imported or included in your main file)
 
 class PaperlessAPI:
     def __init__(self, config):
@@ -88,16 +83,17 @@ class PaperlessAPI:
             url = data.get("next")
 
     def get_document_metadata(self, doc_id):
-        r = self.session.get(f"{self.base_url}/api/documents/{doc_id}/")
-        r.raise_for_status()
-        return r.json()
+        return self.session.get(f"{self.base_url}/api/documents/{doc_id}/").json()
 
     def download_document(self, doc_id):
         return self.session.get(f"{self.base_url}/api/documents/{doc_id}/download/").content
 
-    def update_document(self, doc_id, text, tags):
-        self.session.patch(f"{self.base_url}/api/documents/{doc_id}/", 
-                           json={"content": text, "tags": tags}).raise_for_status()
+    def update_document(self, doc_id, text=None, tags=None):
+        """Modified to make text optional for tag-only updates."""
+        payload = {}
+        if text is not None: payload["content"] = text
+        if tags is not None: payload["tags"] = tags
+        self.session.patch(f"{self.base_url}/api/documents/{doc_id}/", json=payload).raise_for_status()
 
     def replace_file(self, doc_id, pdf_bytes):
         if 'csrftoken' not in self.session.cookies: self.session.get(f"{self.base_url}/api/")
@@ -106,7 +102,7 @@ class PaperlessAPI:
         r = self.session.post(f"{self.base_url}/api/documents/{doc_id}/replace_document/", headers=headers, files=files, timeout=120)
         return r.status_code == 200
 
-# [OllamaClient and CacheManager and PDFProcessor snippets would be here]
+# ... [OllamaClient, CacheManager, PDFProcessor remain identical to previous multi-core version] ...
 class OllamaClient:
     def __init__(self, config):
         self.url = config["OLLAMA_URL"]
@@ -114,7 +110,6 @@ class OllamaClient:
         try:
             with open("prompt.md", "r") as f: self.prompt = f.read()
         except: self.prompt = "Transcribe the text in this image."
-
     def ocr_image(self, img_bytes):
         b64 = base64.b64encode(img_bytes).decode("utf-8")
         payload = {"model": self.model, "prompt": self.prompt, "images": [b64], "stream": False}
@@ -125,7 +120,6 @@ class CacheManager:
     def __init__(self, cache_dir):
         self.cache_dir = cache_dir
         if not os.path.exists(self.cache_dir): os.makedirs(self.cache_dir)
-
     def get_doc_path(self, doc_id): return os.path.join(self.cache_dir, str(doc_id))
     def is_cached(self, doc_id): return os.path.exists(self.get_doc_path(doc_id))
     def save_to_cache(self, doc_id, images, total_pages):
@@ -154,7 +148,6 @@ class PDFProcessor:
             img.save(buf, format="PNG")
             bytes_list.append(buf.getvalue())
         return bytes_list, len(images)
-
     @staticmethod
     def from_text(text_pages):
         writer = PdfWriter()
@@ -175,27 +168,18 @@ class PDFProcessor:
 
 def producer(api, cache, job_queue, config_tag_id, target_id=None, force=False, subgroup_tag_id=None, retry_failed=False):
     done_tag_id = int(config_tag_id)
-    
     if retry_failed:
-        print(f"🔄 Reprocessing IDs from {CONFIG['DLQ_FILE']}...")
         if not os.path.exists(CONFIG["DLQ_FILE"]):
-            print("❌ No DLQ file found.")
             for _ in range(CONFIG["THREADS"]): job_queue.put(None)
             return
-        
         with open(CONFIG["DLQ_FILE"], "r") as f:
             ids = list(set(line.strip() for line in f if line.strip()))
-        
-        # Clear the DLQ file after reading to avoid infinite retry loops
         open(CONFIG["DLQ_FILE"], "w").close()
-        
         tracker.set_total(len(ids))
         docs_to_process = []
         for did in ids:
-            try:
-                docs_to_process.append(api.get_document_metadata(did))
-            except:
-                print(f"⚠️ Could not find doc ID {did} in Paperless.")
+            try: docs_to_process.append(api.get_document_metadata(did))
+            except: pass
     elif target_id:
         try:
             doc = api.get_document_metadata(target_id)
@@ -216,10 +200,12 @@ def producer(api, cache, job_queue, config_tag_id, target_id=None, force=False, 
                 raw_pdf = api.download_document(doc_id)
                 imgs, total_count = PDFProcessor.to_images(raw_pdf, page_limit=CONFIG["PAGE_LIMIT"])
                 cache.save_to_cache(doc_id, imgs, total_count)
-            
             job_queue.put({"id": doc_id, "title": doc['title'], "images": imgs, "total_pages": total_count, "tags": doc.get('tags', [])})
         except Exception:
             log_to_dlq(doc['id'])
+            # Add failed tag in Paperless immediately
+            try: api.update_document(doc['id'], tags=list(set(doc.get('tags', []) + [CONFIG["FAILED_TAG_ID"]])))
+            except: pass
             tracker.increment_done(success=False)
     
     for _ in range(CONFIG["THREADS"]): job_queue.put(None)
@@ -230,27 +216,33 @@ def worker(api, ollama, cache, job_queue):
         if job is None:
             job_queue.task_done()
             break
-        
         try:
             texts = [ollama.ocr_image(img) for img in job['images']]
             footer = f"\n\n--- OCR Footer: {len(job['images'])} pages ---"
             new_pdf = PDFProcessor.from_text(texts)
             api.replace_file(job['id'], new_pdf)
-            api.update_document(job['id'], "\n\n".join(texts) + footer, list(set(job['tags'] + [CONFIG["TAG_ID"]])))
+            
+            # SUCCESS: Add 'done' tag, remove 'failed' tag
+            final_tags = list((set(job['tags']) | {CONFIG["TAG_ID"]}) - {CONFIG["FAILED_TAG_ID"]})
+            api.update_document(job['id'], "\n\n".join(texts) + footer, final_tags)
+            
             cache.clear_cache(job['id'])
             tracker.increment_done(success=True)
         except Exception:
             log_to_dlq(job['id'])
+            # Update Paperless with failed tag
+            try: api.update_document(job['id'], tags=list(set(job['tags'] + [CONFIG["FAILED_TAG_ID"]])))
+            except: pass
             tracker.increment_done(success=False)
         finally:
             job_queue.task_done()
 
 def main():
-    parser = argparse.ArgumentParser(description="Parallel AI OCR with Dead Letter Queue")
+    parser = argparse.ArgumentParser(description="Parallel AI OCR with Failure Tagging")
     parser.add_argument("-id", type=int, help="Process single ID")
     parser.add_argument("-tag_id", type=int, help="Process subgroup")
     parser.add_argument("--force", action="store_true", help="Force processing")
-    parser.add_argument("--retry-failed", action="store_true", help="Process only IDs in failed_ids.txt")
+    parser.add_argument("--retry-failed", action="store_true", help="Retry failed IDs")
     args = parser.parse_args()
 
     api = PaperlessAPI(CONFIG)
@@ -259,11 +251,9 @@ def main():
     job_queue = queue.Queue(maxsize=CONFIG["BUFFER_SIZE"])
 
     threading.Thread(target=producer, args=(api, cache, job_queue, CONFIG["TAG_ID"], args.id, args.force, args.tag_id, args.retry_failed), daemon=True).start()
-
     threads = [threading.Thread(target=worker, args=(api, ollama, cache, job_queue)) for _ in range(CONFIG["THREADS"])]
     for t in threads: t.start()
     for t in threads: t.join()
-    
     print("\n🏁 Process complete.")
 
 if __name__ == "__main__":

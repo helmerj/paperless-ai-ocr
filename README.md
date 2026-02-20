@@ -15,6 +15,7 @@ While I managed to get `paperless-GPT` running and working with Ollama, it consi
 * **Real-time Dashboard:** Console-based progress tracking with percentage completion.
 * **Intelligent Caching:** Prevents redundant downloads, saving bandwidth and compute resources.
 * **Dead Letter Queue (DLQ): Automatically logs failed document IDs to failed_ids.txt for later analysis.
+* **OCR-failed tag in Paperless-ngx:** Monitor failures directly in the Paperless-ngx UI.
 * **Smart Reprocessing: Use the --retry-failed flag to process only previously failed documents.
 * **Fully Automated Workflow:** Automatically tags processed documents with `ocr-done`.
 * **External Prompting:** Easily customize AI instructions via the `prompt.md` file.
@@ -83,7 +84,7 @@ pip install -r requirements.txt
 **Reprocess failed documents (DLQ):
 `python run.py --retry-failed`
 <br>
-This reads from failed_ids.txt, attempts processing, and clears the file upon start.
+This reads from failed_ids.txt, attempts processing, and clears the file upon start.  When you run with --retry-failed and a document succeeds, the script automatically removes the ocr-failed tag and adds the ocr-done tag.
 
 ## 5. 📝 License
 
