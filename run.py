@@ -7,7 +7,7 @@ import threading
 import json
 import requests
 import sys
-import argparse  # Added for CLI arguments
+import argparse
 from dotenv import load_dotenv
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
@@ -129,7 +129,6 @@ class PaperlessAPI:
                 url = None
 
     def get_document_metadata(self, doc_id):
-        """Fetches metadata for a single specific document."""
         r = self.session.get(f"{self.base_url}/api/documents/{doc_id}/")
         r.raise_for_status()
         return r.json()
@@ -205,30 +204,46 @@ class PDFProcessor:
         writer.write(out)
         return out.getvalue()
 
-def producer(api, cache, job_queue, tag_id, target_id=None):
+def producer(api, cache, job_queue, tag_id, target_id=None, force=False):
     """
-    If target_id is provided, only process that one document.
-    Otherwise, fetch all documents without the target tag.
+    Handles document discovery with improved tag validation.
     """
+    # Ensure tag_id is an integer for comparison
+    target_tag_id = int(tag_id)
+
     if target_id:
         try:
             doc = api.get_document_metadata(target_id)
+            # Ensure we are comparing integers to integers
+            current_tags = [int(t) for t in doc.get('tags', [])]
+            
+            print(f"🔍 DEBUG: Document {target_id} has tags: {current_tags} | Target Tag: {target_tag_id}")
+
+            # Implementation of --force logic
+            if target_tag_id in current_tags and not force:
+                print(f"⚠️ Document {target_id} already has the OCR tag (ID: {target_tag_id}). Skipping.")
+                print(f"💡 Use --force to re-process anyway.")
+                tracker.set_total(1)
+                tracker.increment_done()
+                job_queue.put(None)
+                return
+
             documents_to_process = [doc]
             tracker.set_total(1)
-            print(f"🎯 Single document mode: Processing ID {target_id}")
+            print(f"🎯 Single document mode: Processing ID {target_id} (Force: {force})")
         except Exception as e:
             print(f"❌ Failed to find document ID {target_id}: {e}")
             job_queue.put(None)
             return
     else:
-        documents_to_process = api.fetch_all_documents(tag_id)
+        documents_to_process = api.fetch_all_documents(target_tag_id)
 
     for doc in documents_to_process:
         doc_id = doc['id']
-        current_tags = doc.get('tags', [])
+        # Double check for mass processing as well
+        current_tags = [int(t) for t in doc.get('tags', [])]
         
-        # In single ID mode, we ignore the tag check to allow force-processing
-        if not target_id and tag_id in current_tags:
+        if not target_id and target_tag_id in current_tags:
             tracker.increment_done() 
             continue
             
@@ -254,9 +269,9 @@ def producer(api, cache, job_queue, tag_id, target_id=None):
     job_queue.put(None)
 
 def main():
-    # --- CLI ARGUMENT PARSING ---
     parser = argparse.ArgumentParser(description="Paperless-ngx OCR processing script.")
     parser.add_argument("-id", type=int, help="Process only the document with this specific ID")
+    parser.add_argument("--force", action="store_true", help="Force processing even if tag exists (only works with -id)")
     args = parser.parse_args()
 
     print("🚀 Main function starting...", flush=True)
@@ -267,10 +282,9 @@ def main():
     
     job_queue = queue.Queue(maxsize=CONFIG["BUFFER_SIZE"])
     
-    # Pass args.id to the producer
     threading.Thread(
         target=producer, 
-        args=(api, cache, job_queue, tag_id, args.id), 
+        args=(api, cache, job_queue, tag_id, args.id, args.force), 
         daemon=True
     ).start()
 
@@ -300,8 +314,7 @@ def main():
         tracker.print_report()
         job_queue.task_done()
     
-    print("🏁 Processing finished. Final Status:", flush=True)
-    tracker.print_report()
+    print("🏁 Processing finished.", flush=True)
 
 if __name__ == "__main__":
     main()
