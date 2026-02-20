@@ -1,79 +1,80 @@
 # Paperless-ngx AI-OCR Bot 🤖
 
-Python-Skript, dass Dokumente aus Paperless-ngx extrahiert, mittels lokalem LLM (Ollama) verarbeitet und die Texte sowie die Dateien aktualisiert.
+A Python script that extracts documents from Paperless-ngx, processes them using a local LLM (Ollama) for OCR, and updates both the document content text in PaperlessNGX and the stored files.
 
 ## Motivation
-PaperlessNGX benutzt Tesseract zur Testerkennung (OCR). Ich war mit der OCR-Qualität nicht wirklich zufrieden.  Tools wie paperless-AI waren nur bedingt in der Lage wirklich gute Titel, Korrespondenten und Tags zu generieren weil der gespeicherte Text als input nicht gut genug war. 
-Ich habe paperless-GPT mit Ollama zwar zum Laufen gebracht, es hat sich allerdings beständig geweigert Dokumente mit auto-OCR Tag automatisch zu prozessieren und eine Aktualisierung des Textinhalts in PaperlessNGX war nur bei manuellem Prozessieren erfolgreich.
+
+Paperless-ngx relies on Tesseract for Optical Character Recognition (OCR). However, the OCR quality is often insufficient for complex layouts or handwritten text. Existing tools like `paperless-AI` struggle to generate accurate titles, correspondents, and tags because the underlying OCR text provided as input is poor.
+
+While I managed to get `paperless-GPT` running and working with Ollama, it consistently failed to automatically process documents with the `auto-OCR` tag, and updating the actual text content within Paperless-ngx was only successful during manual processing. This bot solves those gaps by providing a reliable, automated pipeline for high-quality OCR.
 
 ## ✨ Features
-- **Pagination:** Verarbeitet tausende Dokumente ohne Unterbrechung.
-- **Lokales LLM-OCR:** Nutzt Ollama (z.B. `minicpm-v`) für hochpräzise Texterkennung.
-- **Echtzeit-Dashboard:** Fortschrittsanzeige in Prozent direkt in der Konsole.
-- **Intelligentes Caching:** Verhindert redundante Downloads und schont damit Ressourcen.
-- **Vollautomatischer Workflow:** Markiert Dokumente nach Abschluss mit einem Tag (`ocr-done`).
-- **Externer Prompt:** Anweisungen an die KI können einfach über `prompt.md` angepasst werden.
-- **Auswahl per Dokument-ID:** Einzelene Dokumente können mit dem -id Paramter zur Prozessierung ausgewählt werden: run.py -id XXX
-- **Auswahl per Tag-ID** Gruppen von Dukuemnten können per Tag-ID ausgewählt werden: run.py -tag_id XXX
-- **Force-Parameter** : Umgehung des 'ocr-done' Tag Checks: run.py -id xxx --force oder run.py -tag_id XXX --force 
+
+* **Pagination:** Seamlessly processes thousands of documents without interruption.
+* **Local LLM-OCR:** Leverages Ollama (e.g., `minicpm-v`) for high-precision text recognition.
+* **Real-time Dashboard:** Console-based progress tracking with percentage completion.
+* **Intelligent Caching:** Prevents redundant downloads, saving bandwidth and compute resources.
+* **Fully Automated Workflow:** Automatically tags processed documents with `ocr-done`.
+* **External Prompting:** Easily customize AI instructions via the `prompt.md` file.
+* **Single Document Targeting:** Process specific documents using the `-id` parameter.
+* **Batch Tag Processing:** Target specific subgroups of documents using the `-tag_id` parameter.
+* **Force Override:** Use the `--force` flag to re-process documents even if they already carry the `ocr-done` tag.
 
 ## 🛠 Installation
 
-### 1. System-Abhängigkeiten
-Stelle sicher, dass `poppler` installiert ist (wird von `pdf2image` benötigt):
-- **macOS:** `brew install poppler`
-- **Ubuntu/Debian:** `sudo apt-get install poppler-utils`
+### 1. System Dependencies
 
-### 2. Python Umgebung
+Ensure `poppler` is installed (required by `pdf2image`):
+
+* **macOS:** `brew install poppler`
+* **Ubuntu/Debian:** `sudo apt-get install poppler-utils`
+
+### 2. Python Environment
+
 ```bash
-# Repository klonen
-git clone [https://github.com/dein-username/paperless-ai-ocr.git](https://github.com/helmerj/paperless-ai-ocr.git)
+# Clone the repository
+git clone https://github.com/helmerj/paperless-ai-ocr.git
 cd paperless-ai-ocr
 
-# Virtual Environment erstellen
+# Create a virtual environment
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Abhängigkeiten installieren
+# Install dependencies
 pip install -r requirements.txt
+
 ```
 
-### 3. Konfiguration
-**Kopiere die Datei env.example nach .env.**
-<br>
+### 3. Configuration
+
+**Copy the example environment file to `.env`:**
 `cp env.example .env`
 
-**Trage deine Paperless-URL, Paperless API-Token, Ollama-URL und Ollama Modell ein.**
-<br>
+**Configure your Paperless-ngx URL, API Token, Ollama URL, and Model:**
 `nano .env`
 
-**Stelle sicher, dass das gelistet LLM model installiert ist**
-<br>
+**Ensure the specified LLM model is downloaded:**
 `ollama pull minicpm-v:latest`
 
-**Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.**
+**Note:** Verify that the `TAG_ID` in your `.env` matches the numerical ID for your "ocr-done" tag in Paperless-ngx.
 
-### 4. 🚀 Start
-**Prozessiere alle Dokumente die NICHT den 'ocr-done' Tag haben**
-<br>
+### 4. 🚀 Usage
+
+**Process all documents that DO NOT have the `ocr-done` tag:**
 `python run.py`
 
-**Prozessiere das Dokument mit der id 1234**
-<br>
+**Process a specific document by ID:**
 `python run.py -id 1234`
 
-**Prozessiere das Dokument mit der id 1234 egal ob es das Tag 'ocr-done' Tag hat oder nicht**
-<br>
+**Force re-process a specific document (even if already tagged):**
 `python run.py -id 1234 --force`
 
-**Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123)**
-<br>
+**Process all documents containing a specific tag (e.g., Tag ID 123):**
 `python run.py -tag_id 123`
 
-**Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123) egal ob sie auch das 'ocr-done' Tag haben**
-<br>
+**Force re-process all documents in a tag group (ignoring the `ocr-done` tag):**
 `python run.py -tag_id 123 --force`
 
-## 5. 📝 Lizenz
-MIT
+## 5. 📝 License
 
+MIT
