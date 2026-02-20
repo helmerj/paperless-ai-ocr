@@ -12,9 +12,14 @@ Ich habe paperless-GPT mit Ollama zwar zum Laufen gebracht, es hat sich allerdin
 - **Echtzeit-Dashboard:** Fortschrittsanzeige in Prozent direkt in der Konsole.
 - **Intelligentes Caching:** Verhindert redundante Downloads und schont damit Ressourcen.
 - **Vollautomatischer Workflow:** Markiert Dokumente nach Abschluss mit einem Tag (`ocr-done`).
+<<<<<<< HEAD
 - **Dead Letter Queue (DLQ): Fehlgeschlagene Dokument-IDs werden automatisch in failed_ids.txt gespeichert.
 - **OCR-Failed Tag in PaperlessNGX:** Verfolge fehlgeschlagene OCR Verusche in PaperlessNGX
 - **Intelligente Wiederholung: Mit dem --retry-failed Flag können gezielt nur die Fehlversuche erneut prozessiert werden.
+=======
+- **Dead Letter Queue (DLQ):** Fehlgeschlagene Dokument-IDs werden automatisch in failed_ids.txt gespeichert.
+- **Intelligente Wiederholung:** Mit dem --retry-failed Flag können gezielt nur die Fehlversuche erneut prozessiert werden.
+>>>>>>> 70834f48e2a85d0a948052758a1cc4a4dccb4cf9
 - **Externer Prompt:** Anweisungen an die KI können einfach über `prompt.md` angepasst werden.
 - **Auswahl per Dokument-ID:** Einzelene Dokumente können mit dem -id Paramter zur Prozessierung ausgewählt werden: run.py -id XXX
 - **Auswahl per Tag-ID** Gruppen von Dukuemnten können per Tag-ID ausgewählt werden: run.py -tag_id XXX
@@ -54,7 +59,7 @@ pip install -r requirements.txt
 <br>
 `ollama pull minicpm-v:latest`
 
-**Stelle sicher, dass die Anzahl der Prozessorkerne in der .env Datei definiert ist um die OCR Prozessierung zu beschleunigen.
+**Stelle sicher, dass die Anzahl der Prozessorkerne in der .env Datei definiert ist um die OCR Prozessierung zu beschleunigen.**
 `NUMBER_CORES=4`
 
 **Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.**

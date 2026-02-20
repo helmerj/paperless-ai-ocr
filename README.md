@@ -14,9 +14,14 @@ While I managed to get `paperless-GPT` running and working with Ollama, it consi
 * **Local LLM-OCR:** Leverages Ollama (e.g., `minicpm-v`) for high-precision text recognition.
 * **Real-time Dashboard:** Console-based progress tracking with percentage completion.
 * **Intelligent Caching:** Prevents redundant downloads, saving bandwidth and compute resources.
+<<<<<<< HEAD
 * **Dead Letter Queue (DLQ): Automatically logs failed document IDs to failed_ids.txt for later analysis.
 * **OCR-failed tag in Paperless-ngx:** Monitor failures directly in the Paperless-ngx UI.
 * **Smart Reprocessing: Use the --retry-failed flag to process only previously failed documents.
+=======
+* **Dead Letter Queue (DLQ):** Automatically logs failed document IDs to failed_ids.txt for later analysis.
+* **Smart Reprocessing:** Use the --retry-failed flag to process only previously failed documents.
+>>>>>>> 70834f48e2a85d0a948052758a1cc4a4dccb4cf9
 * **Fully Automated Workflow:** Automatically tags processed documents with `ocr-done`.
 * **External Prompting:** Easily customize AI instructions via the `prompt.md` file.
 * **Single Document Targeting:** Process specific documents using the `-id` parameter.
@@ -59,7 +64,7 @@ pip install -r requirements.txt
 **Ensure the specified LLM model is downloaded:**
 `ollama pull minicpm-v:latest`
 
-**Ensure to specify the number of cores to use to greatly speed up OCR processing in the .env file
+**Ensure to specify the number of cores to use to greatly speed up OCR processing in the .env file**
 `NUMBER_CORES=4`
 
 **Note:** Verify that the `TAG_ID` in your `.env` matches the numerical ID for your "ocr-done" tag in Paperless-ngx.
@@ -81,7 +86,7 @@ pip install -r requirements.txt
 **Force re-process all documents in a tag group (ignoring the `ocr-done` tag):**
 `python run.py -tag_id 123 --force`
 
-**Reprocess failed documents (DLQ):
+**Reprocess failed documents (DLQ):**
 `python run.py --retry-failed`
 <br>
 This reads from failed_ids.txt, attempts processing, and clears the file upon start.  When you run with --retry-failed and a document succeeds, the script automatically removes the ocr-failed tag and adds the ocr-done tag.
