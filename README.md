@@ -50,21 +50,23 @@ ollama pull minicpm-v:latest
 
 # Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.
 
+```
+
 ### 4. 🚀 Start
 # Prozessiere alle Dokumente die NICHT den 'ocr-done' Tag haben
-python run.py
+`python run.py`
 
 # Prozessiere das Dokument mit der id 1234
-python run.py -id 1234
+`python run.py -id 1234`
 
 # Prozessiere das Dokument mit der id 1234 egal ob es das Tag 'ocr-done' Tag hat oder nicht
-python run.py -id 1234 --force
+`python run.py -id 1234 --force`
 
 # Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123)
-python run.py -tag_id 123
+`python run.py -tag_id 123`
 
 # Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123) egal ob sie auch das 'ocr-done' Tag haben
-python run.py -tag_id 123 --force
+`python run.py -tag_id 123 --force`
 
 
 ### 5. 📝 Lizenz
