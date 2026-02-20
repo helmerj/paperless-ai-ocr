@@ -12,6 +12,8 @@ Ich habe paperless-GPT mit Ollama zwar zum Laufen gebracht, es hat sich allerdin
 - **Echtzeit-Dashboard:** Fortschrittsanzeige in Prozent direkt in der Konsole.
 - **Intelligentes Caching:** Verhindert redundante Downloads und schont damit Ressourcen.
 - **Vollautomatischer Workflow:** Markiert Dokumente nach Abschluss mit einem Tag (`ocr-done`).
+- **Dead Letter Queue (DLQ): Fehlgeschlagene Dokument-IDs werden automatisch in failed_ids.txt gespeichert.
+- **Intelligente Wiederholung: Mit dem --retry-failed Flag können gezielt nur die Fehlversuche erneut prozessiert werden.
 - **Externer Prompt:** Anweisungen an die KI können einfach über `prompt.md` angepasst werden.
 - **Auswahl per Dokument-ID:** Einzelene Dokumente können mit dem -id Paramter zur Prozessierung ausgewählt werden: run.py -id XXX
 - **Auswahl per Tag-ID** Gruppen von Dukuemnten können per Tag-ID ausgewählt werden: run.py -tag_id XXX
@@ -51,7 +53,12 @@ pip install -r requirements.txt
 <br>
 `ollama pull minicpm-v:latest`
 
+**Stelle sicher, dass die Anzahl der Prozessorkerne in der .env Datei definiert ist um die OCR Prozessierung zu beschleunigen.
+`NUMBER_CORES=4`
+
 **Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.**
+
+
 
 ### 4. 🚀 Start
 **Prozessiere alle Dokumente die NICHT den 'ocr-done' Tag haben**
@@ -73,6 +80,11 @@ pip install -r requirements.txt
 **Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123) egal ob sie auch das 'ocr-done' Tag haben**
 <br>
 `python run.py -tag_id 123 --force`
+
+**Fehlgeschlagene Dokumente erneut versuchen (DLQ):**
+<br>
+`python run.py --retry-failed`
+Liest die IDs aus failed_ids.txt, startet die Verarbeitung und leert die Datei.
 
 ## 5. 📝 Lizenz
 MIT
