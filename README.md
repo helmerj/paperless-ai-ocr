@@ -36,39 +36,44 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Abhängigkeiten installieren
 pip install -r requirements.txt
-
-### 3. Konfiguration
-# Kopiere die Datei env.example nach .env.
-cp env.example .env
-
-# Trage deine Paperless-URL, Paperless API-Token, Ollama-URL und Ollama Modell ein.
-nano .env
-
-# Stelle sicher, dass das gelistet LLM model installiert ist
-
-ollama pull minicpm-v:latest
-
-# Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.
-
 ```
 
+### 3. Konfiguration
+**Kopiere die Datei env.example nach .env.**
+<br>
+`cp env.example .env`
+
+**Trage deine Paperless-URL, Paperless API-Token, Ollama-URL und Ollama Modell ein.**
+<br>
+`nano .env`
+
+**Stelle sicher, dass das gelistet LLM model installiert ist**
+<br>
+`ollama pull minicpm-v:latest`
+
+**Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.**
+
 ### 4. 🚀 Start
-# Prozessiere alle Dokumente die NICHT den 'ocr-done' Tag haben
+**Prozessiere alle Dokumente die NICHT den 'ocr-done' Tag haben**
+<br>
 `python run.py`
 
-# Prozessiere das Dokument mit der id 1234
+**Prozessiere das Dokument mit der id 1234**
+<br>
 `python run.py -id 1234`
 
-# Prozessiere das Dokument mit der id 1234 egal ob es das Tag 'ocr-done' Tag hat oder nicht
+**Prozessiere das Dokument mit der id 1234 egal ob es das Tag 'ocr-done' Tag hat oder nicht**
+<br>
 `python run.py -id 1234 --force`
 
-# Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123)
+**Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123)**
+<br>
 `python run.py -tag_id 123`
 
-# Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123) egal ob sie auch das 'ocr-done' Tag haben
+**Prozessiere alle Dokumente mit dem Tag <tag name> (tag id von <tag name> in paperless == 123) egal ob sie auch das 'ocr-done' Tag haben**
+<br>
 `python run.py -tag_id 123 --force`
 
-
-### 5. 📝 Lizenz
+## 5. 📝 Lizenz
 MIT
 
