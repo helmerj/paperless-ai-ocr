@@ -22,7 +22,7 @@ While I managed to get `paperless-GPT` running and working with Ollama, it consi
 * **Single Document Targeting:** Process specific documents using the `-id` parameter.
 * **Batch Tag Processing:** Target specific subgroups of documents using the `-tag_id` parameter.
 * **Force Override:** Use the `--force` flag to re-process documents even if they already carry the `ocr-done` tag.
-* * **Logging:** Logging to the console und into a log file.
+* **Logging:** Logging to the console und into a log file.
 
 
 ## 🛠 Installation
@@ -87,6 +87,16 @@ pip install -r requirements.txt
 `python run.py --retry-failed`
 <br>
 This reads from failed_ids.txt, attempts processing, and clears the file upon start.  When you run with --retry-failed and a document succeeds, the script automatically removes the ocr-failed tag and adds the ocr-done tag.
+
+**Parallel OCR Processing:**
+By default Ollama accepts 4 concurrent requests. To increase this number (https://docs.ollama.com/faq#how-does-ollama-handle-concurrent-requests) you will need to configure it which does depend on your OS.
+For MacOS I did add this to my .zshrc:
+````
+# Ollama Configuration for Parallel OCR
+launchctl setenv OLLAMA_NUM_PARALLEL 8
+launchctl setenv OLLAMA_MAX_LOADED_MODELS 1
+````
+Note I have 10 CPU cores and left some headroom. Play with these setting to get to an optimal speed. Execute the commands in the terminal, restart ollama and test the value. Once you have something that is an acceptable balance between OCR speed and computer strain, commit the values to you .bashrc or .zshrc file to make them stick.
 
 ## 5. 📝 License
 
