@@ -12,13 +12,14 @@ Ich habe paperless-GPT mit Ollama zwar zum Laufen gebracht, es hat sich allerdin
 - **Echtzeit-Dashboard:** Fortschrittsanzeige in Prozent direkt in der Konsole.
 - **Intelligentes Caching:** Verhindert redundante Downloads und schont damit Ressourcen.
 - **Vollautomatischer Workflow:** Markiert Dokumente nach Abschluss mit einem Tag (`ocr-done`).
-- **Dead Letter Queue (DLQ): Fehlgeschlagene Dokument-IDs werden automatisch in failed_ids.txt gespeichert.
+- **Dead Letter Queue (DLQ):** Fehlgeschlagene Dokument-IDs werden automatisch in failed_ids.txt gespeichert.
 - **OCR-Failed Tag in PaperlessNGX:** Verfolge fehlgeschlagene OCR Verusche in PaperlessNGX
-- **Intelligente Wiederholung: Mit dem --retry-failed Flag können gezielt nur die Fehlversuche erneut prozessiert werden.
+- **Intelligente Wiederholung:** Mit dem --retry-failed Flag können gezielt nur die Fehlversuche erneut prozessiert werden.
 - **Externer Prompt:** Anweisungen an die KI können einfach über `prompt.md` angepasst werden.
 - **Auswahl per Dokument-ID:** Einzelene Dokumente können mit dem -id Paramter zur Prozessierung ausgewählt werden: run.py -id XXX
 - **Auswahl per Tag-ID** Gruppen von Dukuemnten können per Tag-ID ausgewählt werden: run.py -tag_id XXX
-- **Force-Parameter** : Umgehung des 'ocr-done' Tag Checks: run.py -id xxx --force oder run.py -tag_id XXX --force 
+- **Force-Parameter** : Umgehung des 'ocr-done' Tag Checks: run.py -id xxx --force oder run.py -tag_id XXX --force
+- **Logging:** Logging zur Konsole und in eine Log-Datei
 
 ## 🛠 Installation
 
