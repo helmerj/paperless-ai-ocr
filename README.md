@@ -14,9 +14,9 @@ While I managed to get `paperless-GPT` running and working with Ollama, it consi
 * **Local LLM-OCR:** Leverages Ollama (e.g., `minicpm-v`) for high-precision text recognition.
 * **Real-time Dashboard:** Console-based progress tracking with percentage completion.
 * **Intelligent Caching:** Prevents redundant downloads, saving bandwidth and compute resources.
-* **Dead Letter Queue (DLQ): Automatically logs failed document IDs to failed_ids.txt for later analysis.
+* **Dead Letter Queue (DLQ):** Automatically logs failed document IDs to failed_ids.txt for later analysis.
 * **OCR-failed tag in Paperless-ngx:** Monitor failures directly in the Paperless-ngx UI.
-* **Smart Reprocessing: Use the --retry-failed flag to process only previously failed documents.
+* **Smart Reprocessing:** Use the --retry-failed flag to process only previously failed documents.
 * **Fully Automated Workflow:** Automatically tags processed documents with `ocr-done`.
 * **External Prompting:** Easily customize AI instructions via the `prompt.md` file.
 * **Single Document Targeting:** Process specific documents using the `-id` parameter.
