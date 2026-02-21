@@ -39,15 +39,38 @@ CONFIG = {
 }
 
 # --- Logging Setup ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler(CONFIG["LOG_FILE"]),
-        logging.StreamHandler(sys.stdout)
-    ]
+import logging
+from logging.handlers import RotatingFileHandler
+
+# ... (inside your CONFIG dict)
+CONFIG.update({
+    "LOG_MAX_BYTES": int(os.getenv("LOG_MAX_MB", 10)) * 1024 * 1024,
+    "LOG_BACKUPS": int(os.getenv("LOG_BACKUP_COUNT", 5))
+})
+
+# --- Robust Logging Setup with Rotation ---
+logger = logging.getLogger("OCR_Bot")
+logger.setLevel(logging.INFO)
+
+# Formatter for consistent log entries
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+
+# 1. Rotating File Handler (The "Garbage Collector" for your logs)
+file_handler = RotatingFileHandler(
+    CONFIG["LOG_FILE"], 
+    maxBytes=CONFIG["LOG_MAX_BYTES"], 
+    backupCount=CONFIG["LOG_BACKUPS"]
 )
-logger = logging.getLogger(__name__)
+file_handler.setFormatter(formatter)
+
+# 2. Stream Handler (To see what's happening in the terminal)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(formatter)
+
+# Add handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
 
 # Thread Safety
 dlq_lock = threading.Lock()
