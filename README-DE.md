@@ -61,6 +61,21 @@ pip install -r requirements.txt
 **Stelle sicher, dass die TAG_ID deiner ID für "ocr-done" entspricht.**
 
 
+**Parallele OCR**
+
+Standardmäßig akzeptiert Ollama **4 gleichzeitige Anfragen** (*concurrent requests*). Um diese Anzahl zu erhöhen (siehe [Ollama FAQ](https://docs.ollama.com/faq#how-does-ollama-handle-concurrent-requests)), musst du eine Konfiguration vornehmen, die von deinem Betriebssystem abhängt.
+
+Für macOS habe ich folgende Zeilen in meine `.zshrc` eingefügt:
+
+```bash
+# Ollama-Konfiguration für paralleles OCR
+launchctl setenv OLLAMA_NUM_PARALLEL 8
+launchctl setenv OLLAMA_MAX_LOADED_MODELS 1
+
+```
+**Hinweis:** Mein System (MacMini M4) verfügt über 10 CPU-Kerne, daher habe ich bewusst etwas Puffer gelassen. Experimentiere mit diesen Werten, um die optimale Verarbeitungsgeschwindigkeit zu ermitteln. Führe die Befehle zunächst im Terminal aus, starte Ollama neu und teste das Ergebnis.
+
+Sobald eine gute Balance zwischen **OCR-Durchsatz** und **Systembelastung** gefunden ist, schreibe die Werte fest in deine `.bashrc` oder `.zshrc`, damit sie auch nach einem Neustart persistent bleiben.
 
 ### 4. 🚀 Start
 **Prozessiere alle Dokumente die NICHT den 'ocr-done' Tag haben**
