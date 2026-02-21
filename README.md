@@ -22,6 +22,8 @@ While I managed to get `paperless-GPT` running and working with Ollama, it consi
 * **Single Document Targeting:** Process specific documents using the `-id` parameter.
 * **Batch Tag Processing:** Target specific subgroups of documents using the `-tag_id` parameter.
 * **Force Override:** Use the `--force` flag to re-process documents even if they already carry the `ocr-done` tag.
+* * **Logging:** Logging to the console und into a log file.
+
 
 ## 🛠 Installation
 
