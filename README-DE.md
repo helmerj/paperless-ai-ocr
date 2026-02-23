@@ -20,6 +20,7 @@ Ich habe paperless-GPT mit Ollama zwar zum Laufen gebracht, es hat sich allerdin
 - **Auswahl per Tag-ID** Gruppen von Dukuemnten können per Tag-ID ausgewählt werden: run.py -tag_id XXX
 - **Force-Parameter** : Umgehung des 'ocr-done' Tag Checks: run.py -id xxx --force oder run.py -tag_id XXX --force
 - **Logging:** Logging zur Konsole und in eine Log-Datei
+- **Docling-Serve:** Unterstützung für Docling-Serve.
 
 ## 🛠 Installation
 
@@ -102,6 +103,11 @@ Sobald eine gute Balance zwischen **OCR-Durchsatz** und **Systembelastung** gefu
 <br>
 `python run.py --retry-failed`
 Liest die IDs aus failed_ids.txt, startet die Verarbeitung und leert die Datei. Bei einem erfolgreichen erneuten Versuch (via --retry-failed) wird das ocr-failed Tag automatisch entfernt und durch das ocr-done Tag ersetzt.
+
+**Docling-Serve OCR:**
+<br> 
+`python run.py --docling`
+Prozessiere PDF Dateien mit docling-serve und seinen OCR engines. Funktioniert mit -id, -tag_id, --force...
 
 ## 5. 📝 Lizenz
 MIT
