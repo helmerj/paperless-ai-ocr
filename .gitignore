@@ -7,7 +7,6 @@ failed_ids.txt
 ocr_bot.log
 ocr_bot.log.*
 
-
 __pycache__/
 *.py[cod]
 *$py.class
